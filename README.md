@@ -14,8 +14,12 @@ This MCP server lets Hermes find and delete messages in one Discord server.
 - The server is fixed to one Discord server ID.
 - A blank delete request is rejected.
 - Hermes must show the summary before asking for confirmation.
-- A confirmation works only for the exact set of messages in the summary.
+- A confirmation works only for the exact set of messages in the summary and expires after five minutes.
+- At most 100 pending confirmations are kept.
 - If matching messages change, the server returns a new summary instead of deleting.
+- “All channels” covers text channels, announcement channels, and active threads that the bot can read.
+- Discord rate limits are followed automatically.
+- Recent messages are deleted in safe Discord batches; older messages are deleted one at a time.
 - `scan_limit_reached: true` means the request may match more messages than the summary shows. Increase `scan_limit` and create a new summary.
 
 ## Supported choices

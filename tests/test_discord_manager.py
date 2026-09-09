@@ -159,6 +159,8 @@ class DeleteServiceTests(unittest.IsolatedAsyncioTestCase):
 class DiscordRestApiTests(unittest.IsolatedAsyncioTestCase):
     async def test_list_channels_returns_message_channels(self):
         def handler(request):
+            if request.url.path.endswith("/threads/active"):
+                return httpx.Response(200, json={"threads": []})
             return httpx.Response(200, json=[
                 {"id": "10", "name": "general", "type": 0},
                 {"id": "11", "name": "voice", "type": 2},
@@ -201,6 +203,8 @@ class DiscordRestApiTests(unittest.IsolatedAsyncioTestCase):
                     {"id": "11", "name": "voice", "type": 2},
                     {"id": "12", "name": "random", "type": 0},
                 ])
+            if request.url.path == "/api/v10/guilds/g1/threads/active":
+                return httpx.Response(200, json={"threads": []})
             if request.url.path == "/api/v10/channels/10/messages":
                 return httpx.Response(200, json=[{
                     "id": "1", "channel_id": "10", "content": "hello",
@@ -215,7 +219,7 @@ class DiscordRestApiTests(unittest.IsolatedAsyncioTestCase):
         )
         api = DiscordRestApi("token", "g1", client=client)
         try:
-            messages = await api.scan_messages(DeleteRequest(channel_ids=("10",)))
+            messages, _ = await api.scan_messages(DeleteRequest(channel_ids=("10",)))
         finally:
             await client.aclose()
 
@@ -240,7 +244,7 @@ class DiscordRestApiTests(unittest.IsolatedAsyncioTestCase):
         finally:
             await client.aclose()
 
-        self.assertEqual(result, {"deleted": 1, "failed": 0})
+        self.assertEqual(result, {"deleted": 1, "failed": 0, "details": []})
         self.assertEqual(requested_paths, ["/api/v10/channels/10/messages/1"])
 
     async def test_scan_reads_more_than_one_page(self):
@@ -250,6 +254,8 @@ class DiscordRestApiTests(unittest.IsolatedAsyncioTestCase):
             nonlocal page_calls
             if request.url.path == "/api/v10/guilds/g1/channels":
                 return httpx.Response(200, json=[{"id": "10", "name": "general", "type": 0}])
+            if request.url.path == "/api/v10/guilds/g1/threads/active":
+                return httpx.Response(200, json={"threads": []})
             if request.url.path == "/api/v10/channels/10/messages":
                 page_calls += 1
                 if page_calls == 1:
@@ -266,7 +272,7 @@ class DiscordRestApiTests(unittest.IsolatedAsyncioTestCase):
         client = httpx.AsyncClient(base_url="https://discord.com/api/v10", transport=httpx.MockTransport(handler))
         api = DiscordRestApi("token", "g1", client=client)
         try:
-            messages = await api.scan_messages(DeleteRequest(channel_ids=("10",), limit=150))
+            messages, _ = await api.scan_messages(DeleteRequest(channel_ids=("10",), limit=150))
         finally:
             await client.aclose()
 
